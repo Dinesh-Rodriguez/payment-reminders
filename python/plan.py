@@ -18,7 +18,15 @@ STEP_LABELS = {
 def parse_iso_date(value):
     if value in (None, ""):
         return None
-    if not isinstance(value, str):
+    if (
+        not isinstance(value, str)
+        or len(value) != 10
+        or value[4] != "-"
+        or value[7] != "-"
+        or not value[:4].isdigit()
+        or not value[5:7].isdigit()
+        or not value[8:].isdigit()
+    ):
         return None
     try:
         return date.fromisoformat(value)
@@ -58,6 +66,8 @@ def build_plan(invoices, sent, today):
 
     invoice_counts = {}
     for invoice in invoices:
+        if not isinstance(invoice, dict):
+            continue
         invoice_id = invoice.get("id")
         if invoice_id is None:
             continue
@@ -67,13 +77,14 @@ def build_plan(invoices, sent, today):
     skipped = []
     skipped_map = {}
     actions = []
-    valid_sent = {
-        entry.get("invoice_id"): entry.get("step")
-        for entry in sent
-        if isinstance(entry, dict)
-        and isinstance(entry.get("invoice_id"), str)
-        and entry.get("step") in STEP_RANK
-    }
+    valid_sent = {}
+    for entry in sent:
+        if (
+            isinstance(entry, dict)
+            and isinstance(entry.get("invoice_id"), str)
+            and entry.get("step") in STEP_RANK
+        ):
+            valid_sent.setdefault(entry["invoice_id"], set()).add(entry["step"])
 
     for invoice in invoices:
         if not isinstance(invoice, dict):
@@ -120,12 +131,8 @@ def build_plan(invoices, sent, today):
         else:
             highest_step = "friendly"
 
-        seen_steps_for_invoice = []
-        for invoice_key, step in valid_sent.items():
-            if invoice_key == invoice_id:
-                seen_steps_for_invoice.append(step)
-
-        if any(STEP_RANK.get(step, 0) >= STEP_RANK[highest_step] for step in seen_steps_for_invoice):
+        seen_steps_for_invoice = valid_sent.get(invoice_id, set())
+        if any(STEP_RANK[step] >= STEP_RANK[highest_step] for step in seen_steps_for_invoice):
             continue
 
         actions.append(

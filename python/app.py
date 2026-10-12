@@ -6,7 +6,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
-from plan import build_plan, read_json
+from plan import build_plan, parse_iso_date, read_json
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
@@ -32,7 +32,26 @@ def load_plan():
     try:
         invoices = read_json(os.path.join(DATA_DIR, "invoices.json"))
         sent = read_json(os.path.join(DATA_DIR, "sent.json"))
-        return build_plan(invoices, sent, TODAY), None
+        plan = build_plan(invoices, sent, TODAY)
+        today_date = parse_iso_date(TODAY)
+        plan["paid_invoices"] = sorted(
+            [
+                {
+                    "invoice_id": invoice.get("id", ""),
+                    "customer": invoice.get("customer", "Customer"),
+                    "amount": invoice.get("amount", ""),
+                    "currency": invoice.get("currency", ""),
+                    "paid_date": invoice.get("paid_date"),
+                }
+                for invoice in invoices
+                if isinstance(invoice, dict)
+                and today_date is not None
+                and parse_iso_date(invoice.get("paid_date")) is not None
+                and parse_iso_date(invoice.get("paid_date")) <= today_date
+            ],
+            key=lambda item: item["invoice_id"],
+        )
+        return plan, None
     except Exception as exc:  # pragma: no cover - UI error path
         return None, str(exc)
 
@@ -51,7 +70,7 @@ def render_page(plan, error_message):
             "</section>"
             "</div>"
         )
-    elif not plan or (not plan["actions"] and not plan["skipped"]):
+    elif not plan or (not plan["actions"] and not plan["skipped"] and not plan.get("paid_invoices")):
         content = (
             "<div class='page-shell'>"
             "<header class='topbar'>"
@@ -109,11 +128,24 @@ def render_page(plan, error_message):
                 f"<li>{escape(item['invoice_id'])}: {escape(human_reason(item['reason']))}</li>"
             )
 
+        paid_rows = []
+        for item in plan.get("paid_invoices", []):
+            amount = item["amount"]
+            if isinstance(amount, (int, float)) and not isinstance(amount, bool):
+                amount_text = f"{item['currency']} {amount:,.2f}"
+            else:
+                amount_text = str(amount)
+            paid_rows.append(
+                f"<li class='paid-row'><div><strong>{escape(item['invoice_id'])}</strong><span>{escape(item['customer'])}</span></div>"
+                f"<div><strong>{escape(amount_text)}</strong><span>Paid {escape(item['paid_date'])}</span></div></li>"
+            )
+
         summary = (
             "<div class='summary-grid'>"
             f"<div class='summary-box'><span>Open reminders</span><strong>{len(plan['actions'])}</strong></div>"
             f"<div class='summary-box warning'><span>Need approval</span><strong>{approval_count}</strong></div>"
             f"<div class='summary-box muted'><span>Skipped</span><strong>{len(plan['skipped'])}</strong></div>"
+            f"<div class='summary-box paid-summary'><span>Paid invoices</span><strong>{len(plan.get('paid_invoices', []))}</strong></div>"
             "</div>"
         )
 
@@ -127,6 +159,7 @@ def render_page(plan, error_message):
             f"{summary}"
             f"<section class='panel'><div class='panel-heading'><h2>Reminder queue</h2><span>{len(plan['actions'])} item(s)</span></div>{''.join(action_rows) if action_rows else '<p>Nothing to do today.</p>'}</section>"
             f"<section class='panel'><div class='panel-heading'><h2>Data checks</h2><span>{len(plan['skipped'])} skipped</span></div><ul class='skipped-list'>{''.join(skipped_rows) if skipped_rows else '<li>All invoice records look good.</li>'}</ul></section>"
+            f"<section class='panel'><div class='panel-heading'><h2>Paid invoices</h2><span>Completed records</span></div><ul class='paid-list'>{''.join(paid_rows) if paid_rows else '<li class=\'paid-empty\'>No paid invoices recorded.</li>'}</ul></section>"
             "</div>"
         )
 
@@ -178,7 +211,7 @@ def render_page(plan, error_message):
         .sync-status {{ display: flex; align-items: center; gap: .45rem; color: #d4e4e3; font-size: .78rem; white-space: nowrap; }}
         .sync-dot {{ width: .5rem; height: .5rem; border-radius: 50%; background: #73c5a9; box-shadow: 0 0 0 4px rgba(115,197,169,.16); }}
     .summary-grid {{
-            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1.8rem;
+            display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1.8rem;
     }}
     .summary-box {{
             background: rgba(255,255,255,.82); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem;
@@ -186,6 +219,7 @@ def render_page(plan, error_message):
     }}
     .summary-box.warning {{ background: var(--warning); }}
         .summary-box.muted {{ background: rgba(255,255,255,.62); }}
+    .summary-box.paid-summary {{ background: var(--approved); }}
         .summary-box span {{ display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; }}
         .summary-box strong {{ display: block; margin-top: .3rem; color: var(--navy); font-size: 2.1rem; font-weight: 500; }}
         .panel {{ background: transparent; margin-bottom: 1.7rem; }}
@@ -224,6 +258,13 @@ def render_page(plan, error_message):
         .auto-note {{ color: var(--friendly); font-size: .85rem; font-weight: 700; padding-top: .35rem; }}
         .check-mark {{ display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; margin-right: .35rem; border-radius: 50%; background: var(--approved); font-size: .62rem; }}
         .skipped-list {{ padding-left: 1.2rem; margin: 0; line-height: 1.7; color: var(--muted); }}
+        .paid-list {{ display: grid; gap: .55rem; padding: 0; margin: 0; list-style: none; }}
+        .paid-row {{ display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: rgba(255,255,255,.72); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }}
+        .paid-row div {{ display: flex; flex-direction: column; gap: .15rem; }}
+        .paid-row div:last-child {{ align-items: flex-end; }}
+        .paid-row strong {{ color: var(--navy); font-size: .88rem; }}
+        .paid-row span {{ color: var(--muted); font-size: .78rem; }}
+        .paid-empty {{ color: var(--muted); list-style: none; }}
     .error {{ color: #8b1e1e; font-weight: bold; }}
         .empty-panel, .error-panel {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1.3rem; box-shadow: 0 7px 20px rgba(23,54,66,.055); }}
     @media (max-width: 390px) {{
@@ -233,6 +274,8 @@ def render_page(plan, error_message):
       .topbar {{ align-items: flex-start; flex-direction: column; }}
       .date-pill {{ align-self: stretch; text-align: center; width: 100%; }}
             .hero-strip {{ align-items: flex-start; flex-direction: column; }}
+            .paid-row {{ align-items: flex-start; flex-direction: column; }}
+            .paid-row div:last-child {{ align-items: flex-start; }}
       button {{ flex-basis: 100%; }}
       .decision-form {{ flex-direction: column; }}
     }}

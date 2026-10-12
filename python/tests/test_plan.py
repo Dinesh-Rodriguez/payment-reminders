@@ -47,6 +47,10 @@ class ReminderRulesTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Invalid date", result.stderr or result.stdout)
 
+    def test_compact_date_format_is_rejected(self):
+        with self.assertRaises(ValueError):
+            build_plan([], [], "20261012")
+
     def test_empty_paid_date_is_invalid_paid_date(self):
         invoices = [{
             "id": "INV-EMPTY-PAID",
@@ -59,6 +63,52 @@ class ReminderRulesTest(unittest.TestCase):
         }]
         plan = build_plan(invoices, [], "2026-10-12")
         self.assertEqual(plan["skipped"], [{"invoice_id": "INV-EMPTY-PAID", "reason": "invalid_paid_date"}])
+
+    def test_higher_sent_step_is_not_hidden_by_a_later_lower_step(self):
+        invoices = [{
+            "id": "INV-SENT-STEPS",
+            "customer": "Example Ltd",
+            "amount": 100.0,
+            "currency": "EUR",
+            "due_date": "2026-09-01",
+            "paid_date": None,
+        }]
+        sent = [
+            {"invoice_id": "INV-SENT-STEPS", "step": "final", "sent_on": "2026-09-25"},
+            {"invoice_id": "INV-SENT-STEPS", "step": "friendly", "sent_on": "2026-09-04"},
+        ]
+
+        plan = build_plan(invoices, sent, "2026-10-12")
+
+        self.assertEqual(plan["actions"], [])
+
+    def test_paid_invoice_is_not_planned_and_future_paid_date_is_skipped(self):
+        invoices = [
+            {
+                "id": "INV-PAID",
+                "customer": "Paid Ltd",
+                "amount": 100.0,
+                "currency": "EUR",
+                "due_date": "2026-09-01",
+                "paid_date": "2026-10-12",
+            },
+            {
+                "id": "INV-FUTURE-PAID",
+                "customer": "Future Ltd",
+                "amount": 100.0,
+                "currency": "EUR",
+                "due_date": "2026-09-01",
+                "paid_date": "2026-10-13",
+            },
+        ]
+
+        plan = build_plan(invoices, [], "2026-10-12")
+
+        self.assertEqual(plan["actions"], [])
+        self.assertEqual(
+            plan["skipped"],
+            [{"invoice_id": "INV-FUTURE-PAID", "reason": "invalid_paid_date"}],
+        )
 
 
 if __name__ == "__main__":

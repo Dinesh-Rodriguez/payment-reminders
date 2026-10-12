@@ -24,5 +24,14 @@
   { "id": "INV-1011", "customer": "Kestrel Outdoor", "email": "payables@kestrel-outdoor.test",
     "amount": 845.25, "currency": "USD", "due_date": "2026-10-02", "paid_date": null },
   { "id": "INV-1012", "customer": "Larkspur Florists", "email": "shop@larkspur.test",
-    "amount": 310.0, "currency": "EUR", "due_date": "2026-10-20", "paid_date": null }
+    "amount": 310.0, "currency": "EUR", "due_date": "2026-10-20", "paid_date": null },
+  {
+  "id": "INV-1013",
+  "customer": "New Customer Ltd",
+  "email": "accounts@newcustomer.test",
+  "amount": 500.0,
+  "currency": "EUR",
+  "due_date": "2026-10-01",
+  "paid_date": "2026-10-12"
+}
 ]

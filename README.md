@@ -16,7 +16,7 @@ an owner dashboard using the same rules engine.
 - Keep the rules separate from the page and use the same engine in both places.
 - Schedule only the highest overdue reminder not already sent.
 - Require approval for `firm` and `final`; decisions remain in memory while the app runs.
-- Show readable skip reasons and clear empty/error states on mobile and desktop.
+- Show readable skip reasons, paid invoices, and clear empty/error states on mobile and desktop.
 
 ## With more time
 I would add persistent approval storage and more validation for malformed invoice files.
