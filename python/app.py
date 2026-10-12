@@ -78,14 +78,17 @@ def render_page(plan, error_message):
             if action["needs_approval"]:
                 approval_count += 1
 
-            form = (
-                "<form method='post' action='/decision' class='decision-form'>"
-                f"<input type='hidden' name='invoice_id' value='{escape(invoice_id, quote=True)}'>"
-                f"<input type='hidden' name='step' value='{escape(action['step'], quote=True)}'>"
-                "<button type='submit' name='decision' value='approved' class='approve'>Approve</button>"
-                "<button type='submit' name='decision' value='rejected' class='reject'>Reject</button>"
-                "</form>"
-            )
+            if action["needs_approval"]:
+                form = (
+                    "<form method='post' action='/decision' class='decision-form'>"
+                    f"<input type='hidden' name='invoice_id' value='{escape(invoice_id, quote=True)}'>"
+                    f"<input type='hidden' name='step' value='{escape(action['step'], quote=True)}'>"
+                    "<button type='submit' name='decision' value='approved' class='approve'>Approve reminder</button>"
+                    "<button type='submit' name='decision' value='rejected' class='reject'>Reject reminder</button>"
+                    "</form>"
+                )
+            else:
+                form = "<div class='auto-note'><span class='check-mark'>OK</span> Ready to send without approval</div>"
             customer = action["message"].split(",")[0].replace("Dear ", "")
             amount = action["message"].split("amount due is ")[1].split(" and it is ")[0]
             action_rows.append(
@@ -120,9 +123,10 @@ def render_page(plan, error_message):
             "<div><p class='eyebrow'>Payment reminder board</p><h1>Today’s actions</h1></div>"
             f"<div class='date-pill'>{escape(TODAY)}</div>"
             "</header>"
+            "<div class='hero-strip'><div><span class='section-label'>Daily queue</span><p>Review the reminders that need your attention before they go out.</p></div><div class='sync-status'><span class='sync-dot'></span>Data loaded</div></div>"
             f"{summary}"
-            f"<section class='panel'><h2>Actions</h2>{''.join(action_rows) if action_rows else '<p>Nothing to do today.</p>'}</section>"
-            f"<section class='panel'><h2>Skipped invoices</h2><ul class='skipped-list'>{''.join(skipped_rows) if skipped_rows else '<li>None.</li>'}</ul></section>"
+            f"<section class='panel'><div class='panel-heading'><h2>Reminder queue</h2><span>{len(plan['actions'])} item(s)</span></div>{''.join(action_rows) if action_rows else '<p>Nothing to do today.</p>'}</section>"
+            f"<section class='panel'><div class='panel-heading'><h2>Data checks</h2><span>{len(plan['skipped'])} skipped</span></div><ul class='skipped-list'>{''.join(skipped_rows) if skipped_rows else '<li>All invoice records look good.</li>'}</ul></section>"
             "</div>"
         )
 
@@ -134,87 +138,101 @@ def render_page(plan, error_message):
   <title>Payment reminders</title>
   <style>
     :root {{
-      --bg: #f3f6fb;
+            --bg: #edf1f4;
       --panel: #ffffff;
-      --panel-alt: #eef4ff;
-      --ink: #1b2430;
-      --muted: #5d6b7a;
-      --line: #dfe7f1;
-      --primary: #1f6feb;
-      --friendly: #2e7d32;
-      --firm: #ef6c00;
-      --final: #c62828;
-      --approved: #dff5e4;
-      --rejected: #f8d7da;
-      --warning: #fff4de;
+            --panel-alt: #f4f7f8;
+            --ink: #162630;
+            --muted: #687982;
+            --line: #d7e0e2;
+            --navy: #173642;
+            --primary: #d95f48;
+            --friendly: #2b806d;
+            --firm: #c87828;
+            --final: #c94a4a;
+            --approved: #dcefe8;
+            --rejected: #f5dddd;
+            --warning: #fff0d9;
     }}
     * {{ box-sizing: border-box; }}
     body {{
-      margin: 0; font-family: Arial, sans-serif; background: linear-gradient(180deg, #eef4ff 0%, #f3f6fb 100%);
-      color: var(--ink); padding: 1rem;
+            margin: 0; font-family: "Segoe UI", sans-serif; background-color: var(--bg);
+            background-image: linear-gradient(rgba(23,54,66,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(23,54,66,.035) 1px, transparent 1px);
+            background-size: 32px 32px; color: var(--ink); padding: 1.5rem;
     }}
-    .page-shell {{ max-width: 980px; margin: 0 auto; }}
+        .page-shell {{ max-width: 1120px; margin: 0 auto; }}
     .topbar {{
-      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-      margin-bottom: 1rem; padding: .5rem 0 .25rem;
+            display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem;
+            margin-bottom: 1.35rem; padding: .35rem 0 0;
     }}
-    .eyebrow {{ margin: 0; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }}
-    h1 {{ margin: .15rem 0 0; font-size: clamp(1.8rem, 3vw, 2.6rem); }}
-    h2 {{ margin: 0 0 .75rem; font-size: 1.15rem; }}
+        .eyebrow {{ margin: 0 0 .45rem; font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--primary); font-weight: 800; }}
+        h1 {{ margin: 0; color: var(--navy); font-family: Georgia, serif; font-size: clamp(2.1rem, 4vw, 3.6rem); font-weight: 400; letter-spacing: 0; }}
+        h2 {{ margin: 0 0 .75rem; color: var(--navy); font-size: 1.1rem; }}
+        .date-label {{ display: block; color: var(--muted); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .25rem; }}
     .date-pill {{
-      background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
-      padding: .6rem 1rem; font-weight: bold; white-space: nowrap; box-shadow: 0 4px 12px rgba(15,23,42,.04);
+            background: var(--navy); color: #fff; border-radius: 8px; padding: .75rem 1rem;
+            font-weight: 700; white-space: nowrap; box-shadow: 0 8px 18px rgba(23,54,66,.16);
     }}
+        .hero-strip {{ display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--navy); color: #fff; border-radius: 12px; padding: 1.2rem 1.35rem; margin-bottom: 1rem; box-shadow: 0 12px 24px rgba(23,54,66,.14); }}
+        .hero-strip p {{ margin: .25rem 0 0; color: #c8d8da; font-size: .92rem; }}
+        .section-label {{ color: #f4aa8f; font-size: .68rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }}
+        .sync-status {{ display: flex; align-items: center; gap: .45rem; color: #d4e4e3; font-size: .78rem; white-space: nowrap; }}
+        .sync-dot {{ width: .5rem; height: .5rem; border-radius: 50%; background: #73c5a9; box-shadow: 0 0 0 4px rgba(115,197,169,.16); }}
     .summary-grid {{
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; margin-bottom: 1.25rem;
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1.8rem;
     }}
     .summary-box {{
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: .9rem 1rem;
-      box-shadow: 0 4px 12px rgba(15,23,42,.04);
+            background: rgba(255,255,255,.82); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem;
+            box-shadow: 0 6px 16px rgba(23,54,66,.06);
     }}
     .summary-box.warning {{ background: var(--warning); }}
-    .summary-box.muted {{ background: #f7f9fb; }}
-    .summary-box span {{ display: block; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }}
-    .summary-box strong {{ display: block; margin-top: .25rem; font-size: 1.8rem; }}
-    .panel {{ background: transparent; margin-bottom: 1.25rem; }}
+        .summary-box.muted {{ background: rgba(255,255,255,.62); }}
+        .summary-box span {{ display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; }}
+        .summary-box strong {{ display: block; margin-top: .3rem; color: var(--navy); font-size: 2.1rem; font-weight: 500; }}
+        .panel {{ background: transparent; margin-bottom: 1.7rem; }}
+        .panel-heading {{ display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; border-bottom: 1px solid var(--line); padding-bottom: .65rem; margin-bottom: .8rem; }}
+        .panel-heading h2 {{ margin: 0; }}
+        .panel-heading span {{ color: var(--muted); font-size: .78rem; }}
     .card {{
-      background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
-      padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 16px rgba(15,23,42,.04);
+            background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 1.15rem; margin-bottom: .75rem; box-shadow: 0 7px 20px rgba(23,54,66,.055);
     }}
-    .card-head {{ display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .75rem; }}
-    .card-head h2 {{ margin: 0; font-size: 1.25rem; }}
+        .card-head {{ display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .9rem; }}
+        .card-head h2 {{ margin: 0; color: var(--navy); font-family: Georgia, serif; font-size: 1.35rem; font-weight: 400; }}
     .tag {{
-      display: inline-block; border-radius: 999px; padding: .3rem .7rem; font-size: .72rem; font-weight: bold;
+            display: inline-block; border-radius: 5px; padding: .3rem .6rem; font-size: .66rem; font-weight: bold;
       text-transform: uppercase; color: white;
     }}
     .tag.friendly {{ background: var(--friendly); }}
     .tag.firm {{ background: var(--firm); }}
     .tag.final {{ background: var(--final); }}
     .meta-grid {{
-      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-bottom: .75rem;
+            display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: .9rem;
     }}
     .meta-grid div {{ display: flex; flex-direction: column; gap: .2rem; }}
     .meta-grid strong {{ color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }}
-    .message {{ margin: .5rem 0 1rem; padding: .85rem .9rem; background: var(--panel-alt); border-radius: 12px; line-height: 1.5; }}
-    .status {{ display: inline-block; padding: .24rem .7rem; border-radius: 999px; background: #ecf0f4; color: var(--ink); font-weight: 700; }}
+    .message {{ margin: .5rem 0 1rem; padding: .85rem .9rem; background: var(--panel-alt); border-left: 3px solid var(--primary); line-height: 1.5; color: #30434b; }}
+    .status {{ display: inline-block; padding: .24rem .65rem; border-radius: 5px; background: #ecf0f4; color: var(--ink); font-weight: 700; font-size: .82rem; }}
     .status.approved {{ background: var(--approved); color: #1d5e2d; }}
     .status.rejected {{ background: var(--rejected); color: #7d1f1f; }}
-    .decision-form {{ display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .25rem; }}
+        .decision-form {{ display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .25rem; }}
     button {{
-      flex: 1 1 120px; background: var(--primary); color: white; border: none; border-radius: 10px;
+            flex: 1 1 150px; background: var(--primary); color: white; border: none; border-radius: 6px;
       padding: .85rem 1rem; font-size: .96rem; font-weight: bold; cursor: pointer;
     }}
     button:hover {{ filter: brightness(0.97); }}
     button.reject {{ background: #6c757d; }}
-    .skipped-list {{ padding-left: 1.2rem; margin: 0; line-height: 1.7; }}
+        .auto-note {{ color: var(--friendly); font-size: .85rem; font-weight: 700; padding-top: .35rem; }}
+        .check-mark {{ display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; margin-right: .35rem; border-radius: 50%; background: var(--approved); font-size: .62rem; }}
+        .skipped-list {{ padding-left: 1.2rem; margin: 0; line-height: 1.7; color: var(--muted); }}
     .error {{ color: #8b1e1e; font-weight: bold; }}
-    .empty-panel, .error-panel {{ background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.3rem; box-shadow: 0 4px 12px rgba(15,23,42,.04); }}
+        .empty-panel, .error-panel {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1.3rem; box-shadow: 0 7px 20px rgba(23,54,66,.055); }}
     @media (max-width: 390px) {{
-      body {{ padding: .7rem; }}
+            body {{ padding: .8rem; }}
       .summary-grid {{ grid-template-columns: 1fr; }}
       .meta-grid {{ grid-template-columns: 1fr; }}
       .topbar {{ align-items: flex-start; flex-direction: column; }}
       .date-pill {{ align-self: stretch; text-align: center; width: 100%; }}
+            .hero-strip {{ align-items: flex-start; flex-direction: column; }}
       button {{ flex-basis: 100%; }}
       .decision-form {{ flex-direction: column; }}
     }}
