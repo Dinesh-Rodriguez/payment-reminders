@@ -47,6 +47,19 @@ class ReminderRulesTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Invalid date", result.stderr or result.stdout)
 
+    def test_empty_paid_date_is_invalid_paid_date(self):
+        invoices = [{
+            "id": "INV-EMPTY-PAID",
+            "customer": "Example Ltd",
+            "email": "accounts@example.test",
+            "amount": 100.0,
+            "currency": "EUR",
+            "due_date": "2026-10-01",
+            "paid_date": "",
+        }]
+        plan = build_plan(invoices, [], "2026-10-12")
+        self.assertEqual(plan["skipped"], [{"invoice_id": "INV-EMPTY-PAID", "reason": "invalid_paid_date"}])
+
 
 if __name__ == "__main__":
     unittest.main()

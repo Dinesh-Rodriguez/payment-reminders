@@ -98,13 +98,16 @@ def build_plan(invoices, sent, today):
             continue
 
         paid_date_raw = invoice.get("paid_date")
-        if paid_date_raw not in (None, ""):
+        if paid_date_raw is not None and paid_date_raw != "":
             paid_date = parse_iso_date(paid_date_raw)
             if paid_date is None or paid_date > today_date:
                 skipped_map[invoice_id] = "invalid_paid_date"
                 continue
             if paid_date <= today_date:
                 continue
+        elif "paid_date" in invoice and paid_date_raw == "":
+            skipped_map[invoice_id] = "invalid_paid_date"
+            continue
 
         days_overdue = (today_date - due_date).days
         if days_overdue < 3:
