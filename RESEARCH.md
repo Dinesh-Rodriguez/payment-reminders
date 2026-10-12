@@ -1,25 +1,25 @@
-# Research
+# Research notes
 
-1. How does the directive define statutory interest for late payment?
+1. **How is statutory interest worked out?**
 
-   Answer: The directive defines statutory interest for late payment as simple interest at a rate equal to the reference rate plus at least eight percentage points. Source 1 calls this the rate for late payment under Article 2(5) and Article 2(6).
+   It is simple interest. The rate is the reference rate plus at least eight percentage points.
 
-   Citation: Source 1, Article 2(5) and Article 2(6).
+   Source: Source 1, Article 2(5) and Article 2(6).
 
-2. The owner's note says the EU maximum late fee is 25 EUR. Is that right?
+2. **Is the owner's suggested EUR 25 late fee correct?**
 
-   Answer: No. The directive says the creditor is entitled to a minimum fixed sum of EUR 40 as compensation for recovery costs, without needing a reminder, so 25 EUR is not the rule in the source text.
+   No. The directive says the creditor can claim at least EUR 40 for recovery costs. It also says this amount is payable without sending a reminder, so EUR 25 is not the amount stated in the source.
 
-   Citation: Source 1, Article 6(1) and Article 6(2).
+   Source: Source 1, Article 6(1) and Article 6(2).
 
-3. Does the business have to send a reminder before it is entitled to interest and to the fixed compensation sum?
+3. **Does a reminder have to be sent before interest or the fixed compensation can be claimed?**
 
-   Answer: No. For commercial transactions between undertakings, the creditor is entitled to interest without a reminder once the conditions in Article 3(1) are met, and the fixed sum is also payable without the necessity of a reminder under Article 6(1) and Article 6(2).
+   No. For business-to-business transactions, interest can be due without a reminder when the conditions in Article 3(1) are met. The EUR 40 compensation is also payable without a reminder.
 
-   Citation: Source 1, Article 3(1), Article 6(1), and Article 6(2).
+   Source: Source 1, Article 3(1), Article 6(1), and Article 6(2).
 
-4. What is the current ECB reference rate?
+4. **What is the current ECB reference rate?**
 
-   Answer: Not in the sources. The sources define the reference rate as the ECB rate for the most recent main refinancing operations, but they do not provide a current numeric value or a date for the current rate.
+   I could not get a current number from the supplied sources. They only explain that the reference rate is the ECB rate for its most recent main refinancing operations.
 
-   Citation: Source 1, Article 2(7)(a)(i).
+   Source: Source 1, Article 2(7)(a)(i).
